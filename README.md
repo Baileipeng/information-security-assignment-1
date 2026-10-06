@@ -48,7 +48,18 @@ cmake -B build -DCMAKE_PREFIX_PATH=<Qt安装路径>/<版本>/<编译器>
 cmake --build build
 ```
 
+本机验证环境（Windows）：Qt 6.8.3 (mingw_64) + MinGW 13.1.0：
+
+```bash
+cmake -B build-qt -G "MinGW Makefiles" -DCMAKE_PREFIX_PATH=E:/Qt/6.8.3/mingw_64 \
+      -DCMAKE_CXX_COMPILER=E:/Qt/Tools/mingw1310_64/bin/g++.exe
+cmake --build build-qt
+```
+
 也可直接用 **Qt Creator** 打开 `CMakeLists.txt` 运行。
+
+GUI 还支持自动截图模式（用于报告配图）：`sdes_gui --capture screenshots`，
+程序会依次自动执行各关卡操作并保存窗口截图到 `screenshots/` 目录。
 
 ## 三、功能与关卡对照
 
@@ -61,6 +72,19 @@ cmake --build build
 | 5 封闭测试 | 枚举 (P,C) 全部匹配密钥；256×1024 全文多重性统计 | GUI 第5页 / 控制台 closure/analysis |
 
 ## 四、测试结果
+
+GUI 实际运行截图见 [`screenshots/`](screenshots/) 目录（由 `sdes_gui --capture` 自动生成）。
+
+### 4.0 GUI 运行截图（关卡 1~4）
+
+| 关卡 | 截图 |
+|------|------|
+| 第1关 基本测试（加密） | ![关卡1加密](screenshots/01_关卡1_基本测试_加密.png) |
+| 第1关 基本测试（解密） | ![关卡1解密](screenshots/02_关卡1_基本测试_解密.png) |
+| 第2关 交叉测试向量表 | ![关卡2](screenshots/03_关卡2_交叉测试向量表.png) |
+| 第3关 文本加解密 | ![关卡3](screenshots/04_关卡3_扩展功能_文本加解密.png) |
+| 第4关 多线程暴力破解 | ![关卡4](screenshots/05_关卡4_暴力破解.png) |
+| 第5关 封闭测试（附加） | ![关卡5](screenshots/06_关卡5_封闭测试_单点枚举.png) / ![关卡5分析](screenshots/07_关卡5_封闭测试_全文分析.png) |
 
 ### 4.1 自检（加解密往返一致性）
 
@@ -92,7 +116,11 @@ ASCII密文(HEX) : 0b446f8fce6f8fce95cee3d08fe3
 
 ### 4.4 第4关：暴力破解
 
-已知对：P=00101000, C=11110100（16 线程）：
+GUI 实测（24 并行线程，双组明密文对）：耗时约 12~19 ms，找到 4 个候选密钥
+（1000000010 / 1000100010 / 1010000010 / 1010100010），见 `screenshots/05_关卡4_暴力破解.png`。
+
+控制台程序结果（单线程遍历，16 线程版 bruteForceMT 同样支持）——
+已知对：P=00101000, C=11110100：
 
 ```
 匹配密钥数 : 12

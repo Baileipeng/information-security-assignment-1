@@ -67,6 +67,7 @@ private:
     QLineEdit* tab3_keyEdit_ = nullptr;
     QPlainTextEdit* tab3_plainEdit_ = nullptr;
     QPlainTextEdit* tab3_binOut_ = nullptr;
+    QLineEdit* tab3_hexOut_ = nullptr;
     QLineEdit* tab3_hexIn_ = nullptr;
     QPlainTextEdit* tab3_decOut_ = nullptr;
 

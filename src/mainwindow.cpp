@@ -186,6 +186,7 @@ QWidget* MainWindow::buildTab2Cross() {
     QPlainTextEdit* input = new QPlainTextEdit(inputBox);
     input->setObjectName("crossInput");
     input->setStyleSheet(kEditStyle);
+    input->setMaximumHeight(120);
     input->setPlainText(
         "00101000 1010000010\n"
         "00101000 0000000000\n"
@@ -274,18 +275,25 @@ QWidget* MainWindow::buildTab3Text() {
     tab3_plainEdit_ = new QPlainTextEdit();
     tab3_plainEdit_->setStyleSheet(kEditStyle);
     tab3_plainEdit_->setPlainText("This is a test");
+    tab3_plainEdit_->setMaximumHeight(90);
     g1->addWidget(tab3_plainEdit_, 1, 1);
 
     g1->addWidget(new QLabel("二进制密文:"), 2, 0);
     tab3_binOut_ = new QPlainTextEdit();
     tab3_binOut_->setReadOnly(true);
     tab3_binOut_->setStyleSheet(kEditStyle);
-    tab3_binOut_->setMaximumHeight(90);
+    tab3_binOut_->setMaximumHeight(80);
     g1->addWidget(tab3_binOut_, 2, 1);
+
+    g1->addWidget(new QLabel("HEX 密文:"), 3, 0);
+    tab3_hexOut_ = new QLineEdit();
+    tab3_hexOut_->setReadOnly(true);
+    tab3_hexOut_->setStyleSheet(kEditStyle);
+    g1->addWidget(tab3_hexOut_, 3, 1);
 
     QPushButton* encBtn = new QPushButton("加密文本");
     connect(encBtn, &QPushButton::clicked, this, &MainWindow::onEncryptText);
-    g1->addWidget(encBtn, 3, 1);
+    g1->addWidget(encBtn, 4, 1);
     layout->addWidget(encBox);
 
     QGroupBox* decBox = new QGroupBox("文本解密", page);
@@ -324,9 +332,10 @@ void MainWindow::onEncryptText() {
         hexs += QString("%1").arg(c, 2, 16, QChar('0'));
     }
     tab3_binOut_->setPlainText(bin.trimmed());
+    tab3_hexOut_->setText(hexs);
+    // 顺手把密文填入解密框，便于一键验证往返还原
+    tab3_hexIn_->setText(hexs);
     setStatus(tab1_status_, QString("文本加密完成，HEX: %1").arg(hexs));
-    QMessageBox::information(this, "加密完成",
-                             QString("HEX 密文（复制用于解密）:\n%1").arg(hexs));
 }
 
 void MainWindow::onDecryptText() {

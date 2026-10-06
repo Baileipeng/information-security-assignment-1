@@ -1,0 +1,17 @@
+# 构建产物
+build/
+build-*/
+*.o
+*.obj
+*.exe
+
+# Qt
+moc_*.cpp
+qrc_*.cpp
+ui_*.h
+*.pro.user*
+
+# IDE
+.vs/
+.vscode/
+.idea/

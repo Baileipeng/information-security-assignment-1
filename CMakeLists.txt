@@ -8,6 +8,7 @@ set(CMAKE_AUTOMOC ON)
 # ---------------- 目标 1：核心算法 + 控制台程序（无 Qt 依赖） ----------------
 add_executable(sdes_console
     src/sdes.cpp
+    src/sdes_analysis.cpp
     src/main_console.cpp
 )
 # 控制台程序只依赖标准库，任何平台可直接编译
@@ -34,6 +35,7 @@ if(Qt6_FOUND OR Qt5_FOUND)
 
     add_executable(sdes_gui
         src/sdes.cpp
+        src/sdes_analysis.cpp
         src/main_gui.cpp
         src/mainwindow.cpp
         src/mainwindow.h

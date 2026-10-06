@@ -30,6 +30,7 @@
 #include <vector>
 
 #include "sdes.h"
+#include "sdes_analysis.h"
 
 using namespace sdes;
 
@@ -236,7 +237,10 @@ static void printUsage() {
         "  sdes_console textdec <key10> <hex分组,如 1A2B3C>\n"
         "  sdes_console bruteforce <plain8> <cipher8> [P2 C2 ...]\n"
         "  sdes_console closure <plain8> <cipher8>\n"
-        "  sdes_console analysis\n"
+        "  sdes_console analysis        第5关完整分析（等价类+碰撞+分布）\n"
+        "  sdes_console keyclasses      第5关 ① 密钥等价类分析\n"
+        "  sdes_console collision       第5关 ② 明文维度碰撞检测\n"
+        "  sdes_console profile         第5关 ③ 全空间 (P,C) 分布统计\n"
         "  sdes_console selftest\n";
 }
 
@@ -343,6 +347,27 @@ int main(int argc, char* argv[]) {
     }
 
     if (cmd == "analysis") { closureAnalysis(); return 0; }
+
+    // ---- 第 5 关三项深入分析（供报告引用） ----
+    if (cmd == "keyclasses") {
+        std::cout << formatKeyEquivalence(analyzeKeyEquivalence());
+        return 0;
+    }
+    if (cmd == "collision") {
+        std::cout << formatPlaintextCollision(analyzePlaintextCollision());
+        return 0;
+    }
+    if (cmd == "profile") {
+        std::cout << formatCipherProfile(analyzeCipherProfile());
+        return 0;
+    }
+    if (cmd == "analysis-full") {
+        std::cout << "======== S-DES 封闭测试完整分析（第 5 关） ========" << std::endl;
+        std::cout << formatKeyEquivalence(analyzeKeyEquivalence()) << std::endl;
+        std::cout << formatPlaintextCollision(analyzePlaintextCollision()) << std::endl;
+        std::cout << formatCipherProfile(analyzeCipherProfile()) << std::endl;
+        return 0;
+    }
 
     if (cmd == "selftest") { return selfTest() == 0 ? 0 : 2; }
 

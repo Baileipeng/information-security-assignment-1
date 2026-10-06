@@ -114,18 +114,28 @@ int main(int argc, char* argv[]) {
         });
         schedule(t + 3000, [&]() { captureWindow(window, outDir + "/05_关卡4_暴力破解.png"); });
 
-        // 第 5 关：封闭测试（单点枚举 + 全文分析）
+        // 第 5 关：封闭测试（单点枚举 + 三个层次递进分析 + 完整报告）
         t += 3600;
         schedule(t, [&]() {
             tabs->setCurrentIndex(4);
             invoke(window, "onClosureTest");
         });
-        schedule(t + 400, [&]() { captureWindow(window, outDir + "/06_关卡5_封闭测试_单点枚举.png"); });
-        schedule(t + 700, [&]() { invoke(window, "onFullAnalysis"); });
-        schedule(t + 2400, [&]() { captureWindow(window, outDir + "/07_关卡5_封闭测试_全文分析.png"); });
+        schedule(t + 400, [&]() { captureWindow(window, outDir + "/06_关卡5_单点密钥枚举.png"); });
+        // ① 密钥等价类分析
+        schedule(t + 700, [&]() { invoke(window, "onKeyEquivalence"); });
+        schedule(t + 1100, [&]() { captureWindow(window, outDir + "/07_关卡5_密钥等价类分析.png"); });
+        // ② 明文维度碰撞检测
+        schedule(t + 1400, [&]() { invoke(window, "onPlaintextCollision"); });
+        schedule(t + 1800, [&]() { captureWindow(window, outDir + "/08_关卡5_明文碰撞检测.png"); });
+        // ③ 全空间分布 + 结论
+        schedule(t + 2100, [&]() { invoke(window, "onCipherProfile"); });
+        schedule(t + 3000, [&]() { captureWindow(window, outDir + "/09_关卡5_全空间分布与结论.png"); });
+        // 一键完整报告（跨页留档）
+        schedule(t + 3300, [&]() { invoke(window, "onFullAnalysis"); });
+        schedule(t + 4200, [&]() { captureWindow(window, outDir + "/10_关卡5_完整分析报告.png"); });
 
         // 结束
-        schedule(t + 3000, [&]() { qApp->quit(); });
+        schedule(t + 5200, [&]() { qApp->quit(); });
         return app.exec();
     }
 

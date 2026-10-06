@@ -52,7 +52,10 @@ private slots:
 
     // Tab5
     void onClosureTest();       // 枚举指定 (P,C) 的全部密钥
-    void onFullAnalysis();      // 全明文空间多重密钥统计
+    void onKeyEquivalence();    // ① 密钥等价类分析
+    void onPlaintextCollision();// ② 明文维度碰撞检测
+    void onCipherProfile();     // ③ 全空间 (P,C) 匹配密钥数分布 + 结论
+    void onFullAnalysis();      // 第5关完整分析报告（①②③+结论）
 
 private:
     // Tab1 控件
@@ -81,7 +84,6 @@ private:
     QLineEdit* tab5_keyEdit_ = nullptr;
     QLineEdit* tab5_plainEdit_ = nullptr;
     QLineEdit* tab5_cipherEdit_ = nullptr;
-    QPlainTextEdit* tab5_result_ = nullptr;
     QPlainTextEdit* tab5_analysisOut_ = nullptr;
 
     // 暴力破解异步任务

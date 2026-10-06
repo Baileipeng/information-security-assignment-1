@@ -17,6 +17,7 @@
 #include <QtConcurrent>
 
 #include "sdes.h"
+#include "sdes_analysis.h"
 
 using namespace sdes;
 
@@ -486,42 +487,52 @@ QWidget* MainWindow::buildTab5Closure() {
     QVBoxLayout* layout = new QVBoxLayout(page);
 
     QLabel* intro = new QLabel(
-        "问题：对随机选定的明密文对，是否只有一个密钥？扩展：对任意明文 P，"
-        "是否存在 K1 ≠ K2 使 E(K1, P) = E(K2, P)？下面提供两种分析："
-        "① 枚举指定 (P, C) 的全部匹配密钥；② 全文扫描统计多重密钥现象。", page);
+        "问题：① 对给定的一对（明文 P，密文 C），满足 E(K,P)=C 的密钥是否唯一？"
+        "② 对任意明文分组 P，是否存在两个不同密钥 K1 ≠ K2 使 E(K1,P)=E(K2,P)？"
+        "下面从三个层次递进分析并给出结论。", page);
     intro->setWordWrap(true);
     layout->addWidget(intro);
 
-    QGroupBox* box = new QGroupBox("单点封闭测试", page);
+    QGroupBox* box = new QGroupBox("单点封闭测试：枚举指定 (P, C) 的全部匹配密钥", page);
     QGridLayout* grid = new QGridLayout(box);
     grid->addWidget(new QLabel("明文 P (8bit):"), 0, 0);
     tab5_plainEdit_ = new QLineEdit("00101000");
     tab5_plainEdit_->setStyleSheet(kEditStyle);
     grid->addWidget(tab5_plainEdit_, 0, 1);
 
-    grid->addWidget(new QLabel("密文 C (8bit):"), 1, 0);
+    grid->addWidget(new QLabel("密文 C (8bit):"), 0, 2);
     tab5_cipherEdit_ = new QLineEdit("11110100");
     tab5_cipherEdit_->setStyleSheet(kEditStyle);
-    grid->addWidget(tab5_cipherEdit_, 1, 1);
+    grid->addWidget(tab5_cipherEdit_, 0, 3);
 
     QPushButton* closureBtn = new QPushButton("枚举全部匹配密钥");
     connect(closureBtn, &QPushButton::clicked, this, &MainWindow::onClosureTest);
-    grid->addWidget(closureBtn, 2, 0, 1, 2);
-
-    tab5_result_ = new QPlainTextEdit();
-    tab5_result_->setReadOnly(true);
-    tab5_result_->setStyleSheet(kEditStyle);
-    tab5_result_->setMaximumHeight(140);
-    grid->addWidget(tab5_result_, 3, 0, 1, 2);
+    grid->addWidget(closureBtn, 0, 4);
     layout->addWidget(box);
 
-    QPushButton* analysisBtn = new QPushButton("全文分析：256 明文 × 1024 密钥多重性统计");
-    connect(analysisBtn, &QPushButton::clicked, this, &MainWindow::onFullAnalysis);
-    layout->addWidget(analysisBtn);
+    // 三个层次的递进分析 + 一键完整报告
+    QHBoxLayout* btnRow = new QHBoxLayout();
+    struct { const char* text; void (MainWindow::*slot)(); } items[] = {
+        {"① 密钥等价类分析",       &MainWindow::onKeyEquivalence},
+        {"② 明文维度碰撞检测",     &MainWindow::onPlaintextCollision},
+        {"③ 全空间分布统计 + 结论", &MainWindow::onCipherProfile},
+        {"⑤ 一键完整分析报告",     &MainWindow::onFullAnalysis},
+    };
+    for (const auto& it : items) {
+        QPushButton* b = new QPushButton(QString::fromUtf8(it.text));
+        connect(b, &QPushButton::clicked, this, it.slot);
+        btnRow->addWidget(b);
+    }
+    layout->addLayout(btnRow);
 
     tab5_analysisOut_ = new QPlainTextEdit();
     tab5_analysisOut_->setReadOnly(true);
     tab5_analysisOut_->setStyleSheet(kEditStyle);
+    tab5_analysisOut_->setPlainText(
+        "点击上方按钮执行分析。三个层次的思路：\n"
+        "  ① 若两个密钥经 Keygen 得到相同的 (k1,k2)，则对所有明文加密结果都相同；\n"
+        "  ② 逐明文检查 1024 个密钥的加密结果是否存在重复值；\n"
+        "  ③ 枚举全部 (P,C) 组合，统计匹配密钥个数的分布。");
     layout->addWidget(tab5_analysisOut_, 1);
     return page;
 }
@@ -542,41 +553,42 @@ void MainWindow::onClosureTest() {
     if (keys.size() > 1) {
         lines << "结论：该明密文对存在不止一个密钥，S-DES 密钥映射非单射。";
     }
-    tab5_result_->setPlainText(lines.join('\n'));
+    tab5_analysisOut_->setPlainText(lines.join('\n'));
+}
+
+void MainWindow::onKeyEquivalence() {
+    tab5_analysisOut_->setPlainText(
+        QString::fromStdString(formatKeyEquivalence(analyzeKeyEquivalence())));
+}
+
+void MainWindow::onPlaintextCollision() {
+    tab5_analysisOut_->setPlainText(
+        QString::fromStdString(formatPlaintextCollision(analyzePlaintextCollision())));
+}
+
+void MainWindow::onCipherProfile() {
+    QString text = QString::fromStdString(formatCipherProfile(analyzeCipherProfile()));
+    text += "\n======== 第 5 关结论 ========\n"
+            "问题① 密钥是否唯一：不唯一。全空间统计中，(P,C) 对的最少匹配密钥数为 4，\n"
+            "  最多 32，25280 个可达 (P,C) 对全部都有 ≥2 个密钥。\n"
+            "问题② 是否存在 K1 ≠ K2 使 E(K1,P)=E(K2,P)：必然存在。\n"
+            "  理由：1024 个密钥经 Keygen 只得到 256 种不同的 (k1,k2) 子密钥对，\n"
+            "  每个子密钥对恰好对应 4 个等价密钥，这 4 个密钥对任意明文加密结果完全相同\n"
+            "  （匹配密钥数始终是 4 的倍数即为佐证），故密钥有效熵只有 8 bit 而非 10 bit。";
+    tab5_analysisOut_->setPlainText(text);
 }
 
 void MainWindow::onFullAnalysis() {
-    // 统计：对每个明文，检查是否存在被多个密钥映射到的密文值
-    int collisionPlaintexts = 0;
-    int maxKeys = 0, maxP = 0, maxC = 0;
-
-    for (int p = 0; p < 256; ++p) {
-        int count[256] = {0};
-        for (uint16_t k = 0; k < 1024; ++k) {
-            ++count[encrypt(static_cast<uint8_t>(p), k)];
-        }
-        bool collide = false;
-        for (int c = 0; c < 256; ++c) {
-            if (count[c] > 1) {
-                collide = true;
-                if (count[c] > maxKeys) {
-                    maxKeys = count[c]; maxP = p; maxC = c;
-                }
-            }
-        }
-        if (collide) ++collisionPlaintexts;
-    }
-
-    QStringList lines;
-    lines << "==== 全文分析结果 ====";
-    lines << QString("存在多重密钥的明文个数: %1 / 256").arg(collisionPlaintexts);
-    lines << QString("单个 (P,C) 对的最大匹配密钥数: %1").arg(maxKeys);
-    lines << QString("典型案例: P=%1, C=%2")
-                 .arg(QString::fromStdString(toBinaryString(static_cast<uint8_t>(maxP), 8)))
-                 .arg(QString::fromStdString(toBinaryString(static_cast<uint8_t>(maxC), 8)));
-    lines << "";
-    lines << "结论：S-DES 的 10 bit 密钥空间 (1024) 小于明文到密文映射所需，"
-             "且 S-Box 结构导致密钥扩展存在等价类，因此对任意明文普遍存在"
-             " K1 ≠ K2 加密得到相同密文 C 的情况。";
-    tab5_analysisOut_->setPlainText(lines.join('\n'));
+    QString text;
+    text += QString::fromStdString(formatKeyEquivalence(analyzeKeyEquivalence()));
+    text += "\n";
+    text += QString::fromStdString(formatPlaintextCollision(analyzePlaintextCollision()));
+    text += "\n";
+    text += QString::fromStdString(formatCipherProfile(analyzeCipherProfile()));
+    text += "\n======== 第 5 关结论 ========\n"
+            "问题① 对给定 (P, C)，满足 E(K,P)=C 的密钥不唯一：最少 4 个，最多 32 个。\n"
+            "问题② 对任意明文 P 都存在 K1 ≠ K2 使 E(K1,P)=E(K2,P)：成立。\n"
+            "理由：P10 置换 + 循环移位 + P8 压缩使 10 bit 密钥只有 8 bit 有效，\n"
+            "1024 个密钥塌缩为 256 个等价类（每类 4 个密钥），同类密钥加密函数完全相同。";
+    tab5_analysisOut_->setPlainText(text);
 }

@@ -369,6 +369,29 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
+    // ---- 性能基准：遍历密钥空间 N 次，测单次全空间遍历耗时 ----
+    if (cmd == "bench") {
+        long long n = (argc >= 3) ? std::atoll(argv[2]) : 10000;
+        uint8_t p = 0b00101000, c = 0b11110100;
+        // 单线程：完整遍历 1024 个密钥一次
+        auto t0 = std::chrono::high_resolution_clock::now();
+        long long hits = 0;
+        for (long long i = 0; i < n; ++i) {
+            for (uint16_t k = 0; k < 1024; ++k) {
+                if (encrypt(p, k) == c) ++hits;
+            }
+        }
+        auto t1 = std::chrono::high_resolution_clock::now();
+        double ms = std::chrono::duration<double, std::milli>(t1 - t0).count();
+        std::cout << "单线程遍历 " << n << " 次全密钥空间 (每次 1024 个密钥)"
+                  << std::endl;
+        std::cout << "总耗时   : " << std::fixed << std::setprecision(2) << ms << " ms" << std::endl;
+        std::cout << "单次耗时 : " << (ms / n) << " ms" << std::endl;
+        std::cout << "吞吐量   : " << (n * 1024.0 / (ms / 1000.0) / 1e6) << " M 次加密/秒" << std::endl;
+        std::cout << "命中     : " << hits / (n ? n : 1) << " 个密钥/次" << std::endl;
+        return 0;
+    }
+
     if (cmd == "selftest") { return selfTest() == 0 ? 0 : 2; }
 
     printUsage();

@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QAtomicInteger>
 #include <QElapsedTimer>
 #include <QFutureWatcher>
 #include <QMainWindow>
@@ -10,6 +11,10 @@ class QPlainTextEdit;
 class QLineEdit;
 class QLabel;
 class QTableWidget;
+class QProgressBar;
+class QSpinBox;
+class QPushButton;
+class QTimer;
 
 // ---------------------------------------------------------------------------
 // 主窗口：用 QTabWidget 组织 5 个关卡页面
@@ -47,8 +52,11 @@ private slots:
     void onDecryptText();
 
     // Tab4
-    void onBruteForce();        // 启动多线程暴力破解
+    void onBruteForce();        // 启动多线程暴力破解（单次）
     void onBruteFinished();     // 破解完成回调
+    void onStressTest();        // 批量压力测试：连续遍历密钥空间 N 次
+    void onStressFinished();    // 压力测试完成回调
+    void onStressTick();        // 压力测试进度刷新（每 100 ms）
 
     // Tab5
     void onClosureTest();       // 枚举指定 (P,C) 的全部密钥
@@ -79,6 +87,11 @@ private:
     QVector<QLineEdit*> tab4_cipherEdits_;
     QLabel* tab4_status_ = nullptr;
     QPlainTextEdit* tab4_result_ = nullptr;
+    QSpinBox* tab4_iterSpin_ = nullptr;      // 压力测试遍历次数
+    QProgressBar* tab4_progress_ = nullptr;  // 进度条
+    QLabel* tab4_timeLabel_ = nullptr;       // 实时计时 / 进度文字
+    QPushButton* tab4_crackBtn_ = nullptr;   // 单次破解按钮
+    QPushButton* tab4_stressBtn_ = nullptr;  // 压力测试按钮
 
     // Tab5 控件
     QLineEdit* tab5_keyEdit_ = nullptr;
@@ -86,10 +99,19 @@ private:
     QLineEdit* tab5_cipherEdit_ = nullptr;
     QPlainTextEdit* tab5_analysisOut_ = nullptr;
 
-    // 暴力破解异步任务
+    // 单次暴力破解异步任务
     QFutureWatcher<uint16_t>* bruteWatcher_ = nullptr;
     QElapsedTimer* bruteTimer_ = nullptr;  // 破解计时
     QVector<std::pair<uint8_t, uint8_t>> brutePairs_;
+
+    // 压力测试（批量遍历密钥空间）状态
+    QFutureWatcher<void>* stressWatcher_ = nullptr;
+    QTimer* stressUiTimer_ = nullptr;
+    QElapsedTimer* stressTimer_ = nullptr;
+    QAtomicInteger<long long> stressDoneKeys_{0};  // 已尝试的密钥次数
+    long long stressTotalKeys_ = 0;                // 总密钥尝试次数
+    long long stressIterations_ = 0;               // 遍历次数
+    int stressThreads_ = 0;
 };
 
 #endif // MAINWINDOW_H

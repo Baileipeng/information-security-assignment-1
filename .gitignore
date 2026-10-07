@@ -5,6 +5,10 @@ build-*/
 *.obj
 *.exe
 
+# 录像中间帧（最终视频在 video/）
+frames/
+frames_annotated/
+
 # Qt
 moc_*.cpp
 qrc_*.cpp

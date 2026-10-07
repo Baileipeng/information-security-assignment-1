@@ -54,7 +54,8 @@ src/main_console.cpp               一体化命令行工具（所有关卡功能
 src/mainwindow.* / main_gui.cpp    Qt GUI（5 个页签对应 5 个关卡）
 ```
 
-截图按关卡存放于 `screenshots/关卡N_xxx/`，第 4 关演示视频在 `video/`。
+截图按关卡存放于 `screenshots/关卡N_xxx/`，第 4 关演示视频在 `video/`
+（**在线观看方式见 [`video/README.md`](video/README.md)**）。
 
 ## 三、构建方法
 
@@ -130,7 +131,7 @@ GUI 实际运行截图见 [`screenshots/`](screenshots/) 目录（按关卡分�
 | 第1关 基本测试（解密） | ![关卡1解密](screenshots/关卡1_基本测试/02_基本测试_解密.png) |
 | 第2关 交叉测试向量表 | ![关卡2](screenshots/关卡2_交叉测试/03_交叉测试向量表.png) |
 | 第3关 文本加解密 | ![关卡3](screenshots/关卡3_扩展功能/04_扩展功能_文本加解密.png) |
-| 第4关 多线程暴力破解 | ![关卡4](screenshots/关卡4_暴力破解/05_暴力破解.png)，演示视频见 `video/关卡4_暴力破解演示.mp4` |
+| 第4关 多线程暴力破解 | ![关卡4](screenshots/关卡4_暴力破解/05_暴力破解.png)，演示视频/动图见 [5.4 节](#54-第4关暴力破解) 与 [`video/`](video/) |
 | 第5关 封闭测试 | ![关卡5](screenshots/关卡5_封闭测试/06_单点密钥枚举.png) ![关卡5等价类](screenshots/关卡5_封闭测试/07_密钥等价类分析.png) ![关卡5碰撞](screenshots/关卡5_封闭测试/08_明文碰撞检测.png) ![关卡5分布](screenshots/关卡5_封闭测试/09_全空间分布与结论.png) ![关卡5报告](screenshots/关卡5_封闭测试/10_完整分析报告.png) |
 
 ### 5.1 自检（加解密往返一致性）
@@ -163,8 +164,13 @@ ASCII密文(HEX) : 0b446f8fce6f8fce95cee3d08fe3
 
 ### 5.4 第4关：暴力破解
 
-**演示视频**：[`video/关卡4_暴力破解演示.mp4`](video/关卡4_暴力破解演示.mp4)（14 秒，
-带阶段字幕与时间戳；动图版 [`关卡4_暴力破解演示.gif`](video/关卡4_暴力破解演示.gif)）。
+**演示动图（在本页直接播放，GitHub 会把仓库内 GIF 渲染为动画）：**
+
+![第4关暴力破解演示](video/关卡4_暴力破解演示.gif)
+
+> 完整 14 秒视频：[`video/关卡4_暴力破解演示.mp4`](video/关卡4_暴力破解演示.mp4)
+> —— 观看方式见下方「如何查看 MP4 视频」。
+
 视频记录了 GUI 实机运行的完整过程：
 
 1. **单次暴力破解**：24 线程并行遍历 1024 个候选密钥，**10.8 ms** 完成，找到 4 个候选密钥；
@@ -177,6 +183,26 @@ ASCII密文(HEX) : 0b446f8fce6f8fce95cee3d08fe3
 
 GUI 截图见 `screenshots/关卡4_暴力破解/05_暴力破解.png`；录像可用
 `sdes_gui --record frames` + `python tools/make_video.py <frames绝对路径>` 复现。
+
+#### 如何查看 MP4 视频（GitHub 不支持在仓库页内播放 MP4）
+
+GitHub 的文件页对 `.mp4` 只提供 **Download / View raw**；而 `raw.githubusercontent.com`
+返回的 `Content-Type` 是 `application/octet-stream`，浏览器只会**下载**、不会播放。
+实测（`curl -I`）确认这一点，因此三种方式任选其一：
+
+| 方式 | 操作 | 说明 |
+|------|------|------|
+| ① 在线播放（最简单） | 点 **[▶ 在线播放视频](https://cdn.jsdelivr.net/gh/Baileipeng/information-security-assignment-1@main/video/关卡4_暴力破解演示.mp4)** | jsDelivr 公共 CDN，实测返回 `Content-Type: video/mp4`，浏览器**点开即播**、可拖动进度 |
+| ② 下载后本地播放 | 在 GitHub 打开 [video/关卡4_暴力破解演示.mp4](video/关卡4_暴力破解演示.mp4) → 点 **Download** 或 **View raw** | 文件仅 331 KB，本地播放器打开即可 |
+| ③ 让 README 内嵌原生播放器 | 把 mp4 **拖进任意 Issue / PR 的评论框**上传，复制 GitHub 返回的 `https://github.com/user-attachments/assets/...` 链接，单独占一行贴进 README | 只有 `user-attachments` 形式的链接会被 GitHub 渲染成播放器；仓库内相对路径和 Release 附件都只会显示为下载链接 |
+
+> 只想在 GitHub 页面上直接看到画面变化的话，上面的 **GIF 已经内嵌在本页**，滚动到此处即自动播放；
+> GIF 是仓库内唯一能被 GitHub 直接渲染成动画的视频格式。
+
+> 镜像备用：若 `cdn.jsdelivr.net` 打不开，把域名换成 `gcore.jsdelivr.net` 或
+> `testingcf.jsdelivr.net`（路径不变），三者实测均返回 `video/mp4`。
+> 链接中的中文文件名若有编码问题，可用百分号编码：
+> `.../video/%E5%85%B3%E5%8D%A14_%E6%9A%B4%E5%8A%9B%E7%A0%B4%E8%A7%A3%E6%BC%94%E7%A4%BA.mp4`。
 
 控制台程序结果——已知对：P=00101000, C=11110100：
 

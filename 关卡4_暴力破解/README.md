@@ -60,10 +60,28 @@
 
 ## 六、演示视频与 GUI 截图
 
+**演示动图（GitHub 页面内直接播放）：**
+
+![第4关暴力破解演示](../../video/关卡4_暴力破解演示.gif)
+
 | 内容 | 位置 |
 |------|------|
-| 演示视频（MP4，14 秒，含阶段字幕与时间戳） | `../video/关卡4_暴力破解演示.mp4` |
-| 同内容动图（GIF） | `../video/关卡4_暴力破解演示.gif` |
+| 演示视频（MP4，14 秒，含阶段字幕与时间戳） | [`../video/关卡4_暴力破解演示.mp4`](../video/关卡4_暴力破解演示.mp4) |
+| 同内容动图（GIF，GitHub 内可直接播放） | [`../video/关卡4_暴力破解演示.gif`](../video/关卡4_暴力破解演示.gif) |
 | GUI 单次破解截图 | ![关卡4](../screenshots/关卡4_暴力破解/05_暴力破解.png) |
 
+### 如何观看 MP4（GitHub 仓库页不支持播放 MP4）
+
+GitHub 对仓库内的 `.mp4` 只显示 **Download / View raw** 按钮，且 raw 链接的
+`Content-Type` 为 `application/octet-stream`，浏览器只会下载不会播放。可选：
+
+1. **在线播放（推荐）**：[▶ 点此播放](https://cdn.jsdelivr.net/gh/Baileipeng/information-security-assignment-1@main/video/关卡4_暴力破解演示.mp4)
+   —— jsDelivr CDN 实测返回 `Content-Type: video/mp4`，点开即在浏览器中播放；
+2. **下载后本地播放**：打开上面的 mp4 文件页 → **Download**（文件仅 331 KB）；
+3. **要原生内嵌播放器**：把 mp4 拖入 GitHub Issue/PR 评论框，用返回的
+   `https://github.com/user-attachments/assets/...` 链接（单独占一行）替换 README 中的引用。
+
 视频展示了"单次毫秒级破解 → 百万遍压力测试进度条与实时计时 → 结果汇总"全过程。
+
+> 镜像备用：若 `cdn.jsdelivr.net` 访问不了，把域名换成 `gcore.jsdelivr.net` 或
+> `testingcf.jsdelivr.net`（路径不变）即可，三者实测均返回 `Content-Type: video/mp4`。

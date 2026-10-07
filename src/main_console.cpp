@@ -1,22 +1,31 @@
 // ---------------------------------------------------------------------------
-// S-DES 控制台测试程序
+// S-DES 控制台测试程序（一体化命令行工具）
+//
+// 本文件是“所有关卡功能的总入口”，便于批量化、脚本化验证；
+// 每个关卡另有独立可运行的示例程序，见仓库根目录：
+//   关卡1_基本测试/   关卡2_交叉测试/   关卡3_扩展功能/
+//   关卡4_暴力破解/   关卡5_封闭测试/
+// 二者共用 src/sdes.*（核心算法）、src/bruteforce_mt.*（多线程破解）、
+// src/sdes_analysis.*（密钥多重性分析）与 src/console_utils.h（命令行工具）。
 //
 // 用途：
-//   1. 交叉测试（第 2 关）：以命令行方式对任意 (明文, 密钥) 计算密文，
+//   1. 基本测试（第 1 关）：encrypt / decrypt 子命令。
+//   2. 交叉测试（第 2 关）：以命令行方式对任意 (明文, 密钥) 计算密文，
 //      便于与其他小组程序交换测试向量、验证算法一致性。
-//   2. 暴力破解（第 4 关）：多线程遍历 1024 个候选密钥并计时。
-//   3. 封闭测试（第 5 关）：对给定明文枚举全部匹配密钥，分析密钥多重性。
-//   4. 自检 selftest：加解密往返一致性校验，输出标准测试向量。
+//   3. 扩展功能（第 3 关）：textenc / textdec 对 ASCII 字符串分组加解密。
+//   4. 暴力破解（第 4 关）：多线程遍历 1024 个候选密钥并计时。
+//   5. 封闭测试（第 5 关）：枚举匹配密钥、密钥等价类分析、全空间分布统计。
 //
 // 用法示例：
 //   sdes_console encrypt 1010000010 00101000
 //   sdes_console decrypt 1010000010 <cipher8bits>
 //   sdes_console textenc 1010000010 "This is a test"
 //   sdes_console textdec 1010000010 <hex 或 二进制分组>
-//   sdes_console bruteforce 00101000 10010010 [P2 C2 ...]   （支持多对）
-//   sdes_console closure 00101000 10010010
-//   sdes_console analysis          （第 5 关全文分析）
-//   sdes_console selftest
+//   sdes_console bruteforce 00101000 11110100 [P2 C2 ...]   （支持多对）
+//   sdes_console closure 00101000 11110100
+//   sdes_console analysis-full    （第 5 关完整分析）
+//   sdes_console bench 10000      （吞吐基准）
+//   sdes_console selftest         （加解密往返一致性自检）
 // ---------------------------------------------------------------------------
 
 #include <algorithm>
@@ -29,105 +38,16 @@
 #include <thread>
 #include <vector>
 
+#include "bruteforce_mt.h"
+#include "console_utils.h"
 #include "sdes.h"
 #include "sdes_analysis.h"
 
 using namespace sdes;
 
-// 打印二进制字符串形式，同时给出十六进制，方便交叉测试时对照
-static void printBits(const std::string& label, const std::string& bits) {
-    std::cout << label << ": " << bits
-              << "  (0x" << std::hex << std::stoul(bits, nullptr, 2) << std::dec << ")"
-              << std::endl;
-}
-
-// 解析 8 bit 输入：支持二进制字符串或 0x 十六进制 / 十进制
-static bool parseByteArg(const std::string& arg, uint8_t& out) {
-    if (arg.find("0x") == 0 || arg.find("0X") == 0) {
-        unsigned long v = std::stoul(arg, nullptr, 16);
-        if (v > 0xFF) return false;
-        out = static_cast<uint8_t>(v);
-        return true;
-    }
-    if (arg.size() == 8 && (arg.find_first_not_of("01") == std::string::npos)) {
-        uint16_t v = 0;
-        return parseBinaryString(arg, 8, v) && (out = static_cast<uint8_t>(v), true);
-    }
-    try {
-        unsigned long v = std::stoul(arg);
-        if (v > 0xFF) return false;
-        out = static_cast<uint8_t>(v);
-        return true;
-    } catch (...) {
-        return false;
-    }
-}
-
-static bool parseKeyArg(const std::string& arg, uint16_t& out) {
-    if (arg.size() == 10 && (arg.find_first_not_of("01") == std::string::npos)) {
-        return parseBinaryString(arg, 10, out);
-    }
-    try {
-        unsigned long v = std::stoul(arg, nullptr, 0);
-        if (v > 0x3FF) return false;
-        out = static_cast<uint16_t>(v);
-        return true;
-    } catch (...) {
-        return false;
-    }
-}
-
-// --------------------------- 暴力破解（多线程） ------------------------------
-
-struct BFChunk {
-    uint16_t begin; // 本线程负责的密钥区间起点（含）
-    uint16_t end;   // 终点（不含）
-    std::vector<uint16_t> matched;
-};
-
-// 将 0..1023 均分给 nThreads 个线程，各自独立枚举，最后合并结果
-static void bruteForceMT(const std::vector<std::pair<uint8_t, uint8_t>>& pairs,
-                         std::vector<uint16_t>& result, double& elapsedMs,
-                         int& threadCount) {
-    unsigned hw = std::thread::hardware_concurrency();
-    int nThreads = static_cast<int>(hw == 0 ? 1 : hw);
-    if (nThreads > 16) nThreads = 16; // 密钥空间仅 1024，线程过多反而浪费
-    if (nThreads < 1) nThreads = 1;
-
-    std::vector<BFChunk> chunks(nThreads);
-    for (int i = 0; i < nThreads; ++i) {
-        chunks[i].begin = static_cast<uint16_t>(1024 * i / nThreads);
-        chunks[i].end   = static_cast<uint16_t>(1024 * (i + 1) / nThreads);
-    }
-
-    auto t0 = std::chrono::high_resolution_clock::now();
-    std::vector<std::thread> workers;
-    for (int i = 0; i < nThreads; ++i) {
-        workers.emplace_back([&chunks, &pairs, i]() {
-            BFChunk& c = chunks[i];
-            for (uint16_t key = c.begin; key < c.end; ++key) {
-                bool ok = true;
-                for (const auto& pc : pairs) {
-                    if (encrypt(pc.first, key) != pc.second) {
-                        ok = false;
-                        break;
-                    }
-                }
-                if (ok) c.matched.push_back(key);
-            }
-        });
-    }
-    for (auto& w : workers) w.join();
-    auto t1 = std::chrono::high_resolution_clock::now();
-
-    result.clear();
-    for (const auto& c : chunks) {
-        result.insert(result.end(), c.matched.begin(), c.matched.end());
-    }
-    std::sort(result.begin(), result.end());
-    elapsedMs = std::chrono::duration<double, std::milli>(t1 - t0).count();
-    threadCount = nThreads;
-}
+// 说明：参数解析(parseByteArg/parseKeyArg)、位串打印(printBits) 已抽取到
+//       src/console_utils.h；多线程暴力破解已抽取到 src/bruteforce_mt.h，
+//       供各关卡独立程序（关卡1~5 目录）与本控制台程序共用，避免重复实现。
 
 // --------------------------- 第 5 关：封闭测试分析 ---------------------------
 
@@ -241,6 +161,8 @@ static void printUsage() {
         "  sdes_console keyclasses      第5关 ① 密钥等价类分析\n"
         "  sdes_console collision       第5关 ② 明文维度碰撞检测\n"
         "  sdes_console profile         第5关 ③ 全空间 (P,C) 分布统计\n"
+        "  sdes_console analysis-full   第5关完整分析报告\n"
+        "  sdes_console bench [N]       遍历 N 次全密钥空间的吞吐基准\n"
         "  sdes_console selftest\n";
 }
 
@@ -312,8 +234,7 @@ int main(int argc, char* argv[]) {
             }
             pairs.emplace_back(p, c);
         }
-        std::vector<uint16_t> keys; double ms; int threads;
-        bruteForceMT(pairs, keys, ms, threads);
+        BruteForceResult bf = bruteForceParallel(pairs);
 
         std::cout << "==== 暴力破解（第 4 关） ====" << std::endl;
         std::cout << "已知明密文对 " << pairs.size() << " 组:" << std::endl;
@@ -321,10 +242,11 @@ int main(int argc, char* argv[]) {
             std::cout << "  P=" << toBinaryString(pc.first, 8)
                       << "  C=" << toBinaryString(pc.second, 8) << std::endl;
         }
-        std::cout << "使用线程数 : " << threads << std::endl;
-        std::cout << "耗时       : " << std::fixed << std::setprecision(3) << ms << " ms" << std::endl;
-        std::cout << "匹配密钥数 : " << keys.size() << std::endl;
-        for (uint16_t k : keys) {
+        std::cout << "使用线程数 : " << bf.threadCount << std::endl;
+        std::cout << "耗时       : " << std::fixed << std::setprecision(3)
+                  << bf.elapsedMs << " ms" << std::endl;
+        std::cout << "匹配密钥数 : " << bf.keys.size() << std::endl;
+        for (uint16_t k : bf.keys) {
             std::cout << "  Key = " << toBinaryString(k, 10)
                       << "  (0x" << std::hex << std::setw(3) << std::setfill('0')
                       << k << std::dec << ")" << std::endl;

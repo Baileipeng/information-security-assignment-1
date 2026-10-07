@@ -3,8 +3,9 @@
 //
 // 用法:
 //   sdes_gui                     正常启动图形界面
-//   sdes_gui --capture <目录>    自动截图模式：依次运行第 1~5 关的操作并
-//                                保存窗口截图到指定目录，用于实验报告配图
+//   sdes_gui --capture <目录>    自动截图模式：依次运行第 1~5 关的操作，
+//                                按关卡分别保存到 <目录>/关卡N_xxx/ 子目录
+//                                （与仓库根目录的关卡命名保持一致）
 //   sdes_gui --record <目录>     自动录像模式：自动演示第 4 关暴力破解
 //                                （单次破解 + 批量压力测试），按 10 fps 抓帧，
 //                                供 ffmpeg 合成为演示视频 / 动图
@@ -111,8 +112,17 @@ int main(int argc, char* argv[]) {
 
     // ---- 自动截图模式 ----
     if (argc >= 2 && QString(argv[1]) == "--capture") {
-        const QString outDir = (argc >= 3) ? QString(argv[2]) : QString("screenshots");
-        QDir().mkpath(outDir);
+        const QString root = (argc >= 3) ? QString(argv[2]) : QString("screenshots");
+
+        // 截图按关卡分子目录存放，与仓库根目录的“关卡N_xxx”命名保持一致
+        const QString outDir1 = root + "/关卡1_基本测试";
+        const QString outDir2 = root + "/关卡2_交叉测试";
+        const QString outDir3 = root + "/关卡3_扩展功能";
+        const QString outDir4 = root + "/关卡4_暴力破解";
+        const QString outDir5 = root + "/关卡5_封闭测试";
+        for (const QString& d : {outDir1, outDir2, outDir3, outDir4, outDir5}) {
+            QDir().mkpath(d);
+        }
 
         // 置顶窗口，避免截图期间被其他应用遮挡
         window.setWindowFlag(Qt::WindowStaysOnTopHint, true);
@@ -138,9 +148,9 @@ int main(int argc, char* argv[]) {
             tabs->setCurrentIndex(0);
             invoke(window, "onEncryptBits");
         });
-        schedule(t + 300, [&]() { captureWindow(window, outDir + "/01_关卡1_基本测试_加密.png"); });
+        schedule(t + 300, [&]() { captureWindow(window, outDir1 + "/01_基本测试_加密.png"); });
         schedule(t + 600, [&]() { invoke(window, "onDecryptBits"); });
-        schedule(t + 900, [&]() { captureWindow(window, outDir + "/02_关卡1_基本测试_解密.png"); });
+        schedule(t + 900, [&]() { captureWindow(window, outDir1 + "/02_基本测试_解密.png"); });
 
         // 第 2 关：交叉测试向量表
         t += 1300;
@@ -148,7 +158,7 @@ int main(int argc, char* argv[]) {
             tabs->setCurrentIndex(1);
             invoke(window, "onGenerateVectors");
         });
-        schedule(t + 400, [&]() { captureWindow(window, outDir + "/03_关卡2_交叉测试向量表.png"); });
+        schedule(t + 400, [&]() { captureWindow(window, outDir2 + "/03_交叉测试向量表.png"); });
 
         // 第 3 关：文本加密 + 解密
         t += 900;
@@ -157,7 +167,7 @@ int main(int argc, char* argv[]) {
             invoke(window, "onEncryptText");
         });
         schedule(t + 300, [&]() { invoke(window, "onDecryptText"); });
-        schedule(t + 600, [&]() { captureWindow(window, outDir + "/04_关卡3_扩展功能_文本加解密.png"); });
+        schedule(t + 600, [&]() { captureWindow(window, outDir3 + "/04_扩展功能_文本加解密.png"); });
 
         // 第 4 关：多线程暴力破解（等待计算完成）
         t += 1200;
@@ -165,7 +175,7 @@ int main(int argc, char* argv[]) {
             tabs->setCurrentIndex(3);
             invoke(window, "onBruteForce");
         });
-        schedule(t + 3000, [&]() { captureWindow(window, outDir + "/05_关卡4_暴力破解.png"); });
+        schedule(t + 3000, [&]() { captureWindow(window, outDir4 + "/05_暴力破解.png"); });
 
         // 第 5 关：封闭测试（单点枚举 + 三个层次递进分析 + 完整报告）
         t += 3600;
@@ -173,19 +183,19 @@ int main(int argc, char* argv[]) {
             tabs->setCurrentIndex(4);
             invoke(window, "onClosureTest");
         });
-        schedule(t + 400, [&]() { captureWindow(window, outDir + "/06_关卡5_单点密钥枚举.png"); });
+        schedule(t + 400, [&]() { captureWindow(window, outDir5 + "/06_单点密钥枚举.png"); });
         // ① 密钥等价类分析
         schedule(t + 700, [&]() { invoke(window, "onKeyEquivalence"); });
-        schedule(t + 1100, [&]() { captureWindow(window, outDir + "/07_关卡5_密钥等价类分析.png"); });
+        schedule(t + 1100, [&]() { captureWindow(window, outDir5 + "/07_密钥等价类分析.png"); });
         // ② 明文维度碰撞检测
         schedule(t + 1400, [&]() { invoke(window, "onPlaintextCollision"); });
-        schedule(t + 1800, [&]() { captureWindow(window, outDir + "/08_关卡5_明文碰撞检测.png"); });
+        schedule(t + 1800, [&]() { captureWindow(window, outDir5 + "/08_明文碰撞检测.png"); });
         // ③ 全空间分布 + 结论
         schedule(t + 2100, [&]() { invoke(window, "onCipherProfile"); });
-        schedule(t + 3000, [&]() { captureWindow(window, outDir + "/09_关卡5_全空间分布与结论.png"); });
+        schedule(t + 3000, [&]() { captureWindow(window, outDir5 + "/09_全空间分布与结论.png"); });
         // 一键完整报告（跨页留档）
         schedule(t + 3300, [&]() { invoke(window, "onFullAnalysis"); });
-        schedule(t + 4200, [&]() { captureWindow(window, outDir + "/10_关卡5_完整分析报告.png"); });
+        schedule(t + 4200, [&]() { captureWindow(window, outDir5 + "/10_完整分析报告.png"); });
 
         // 结束
         schedule(t + 5200, [&]() { qApp->quit(); });
